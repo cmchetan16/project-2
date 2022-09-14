@@ -1,18 +1,21 @@
 const mongoose = require('mongoose');
-const objectId = mongoose.Schema.Types.ObjectId;
+const ObjectId = mongoose.Schema.Types.ObjectId;
 
 const internSchema = new mongoose.Schema(
     {
         name: String,
         email: String,
         mobile: String,
-        collegeId: objectId,
+        collegeId: {
+            type: ObjectId,
+            ref: "Collage"
+        },
         isDeleted: {
             type: Boolean,
-            default:false
+            default: false
         }
     }
 )
 
-module.exports=mongoose.model('Intern',internSchema)
+module.exports = mongoose.model('Intern', internSchema)
 

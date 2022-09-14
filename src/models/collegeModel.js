@@ -6,7 +6,7 @@ const collageSchema = new mongoose.Schema(
         fullName: String,
         logoLink: String,
         isDeleted: {
-            type: boolean,
+            type: Boolean,
             default: false
         }
     }
