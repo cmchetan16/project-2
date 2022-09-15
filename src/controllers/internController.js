@@ -1,90 +1,59 @@
 const internModel = require('../models/internModel')
 const collegeModel = require('../models/collegeModel')
-const validator = require('../util/validator')
+const { mail, dataValidation, validFullName } = require('../util/validator');
 
 // ----------------------------------------createCollege----------------------------------------
 const createIntern = async (req, res) => {
     try {
         const reqBody = req.body
-        const { name, email, mobile, collegeId } = reqBody
+        let { name, email, mobile, collegeName } = reqBody
 
-        // ----------------------- data present or not in the body--------------------
-        const objKey = Object.keys(reqBody)
-        if (objKey == 0)
-            return res.status(400).send({ status: false, massage: 'Please fill data' })
-        if (objKey > 4)
-            return res.status(400).send({ status: false, massage: 'You can\'t add extra field' })
 
-        //-----------------------field present or not in the body-----------------------
+        if (!dataValidation(reqBody))
+            return res.status(400).send({ status: false, msg: "Please provide some data" })
 
         if (!name)
-            return res.status(400).send({ status: false, massage: 'Please fill name' })
+            return res.status(400).send({ status: false, msg: "please provide the name" })
 
+        if (!validFullName(name))
+            return res.status(400).send({ status: false, msg: "Please enter a valid name " })
+
+        const dublicate = await internModel.find()
         if (!email)
-            return res.status(400).send({ status: false, massage: 'Please fill email' })
+            return res.status(400).send({ status: false, msg: "please provide the email" })
 
-        if (!mobile)
-            return res.status(400).send({ status: false, massage: 'Please fill mobile' })
+        if (!mail(email)) { return res.status(400).send({ status: false, msg: "Please enter a valid email " }) }
 
-        if (!collegeId)
-            return res.status(400).send({ status: false, massage: 'Please fill collegeId' })
+        for (let i = 0; i < dublicate.length; i++) {
+            if (dublicate[i].email == email) {
+                return res.status(400).send({ status: false, msg: "email already registered" })
+            }
+        }
 
-        // ---------------------------- data validations------------------------------
-        if (!validator.isValidText(name))
-            return res.status(400).send({ status: false, message: 'Enter valid name' });
+        if (!mobile) { return res.status(400).send({ status: false, msg: "mobile already exist" }) }
+        if ((!(/^[ 0-9 ]{10,10}$/).test(mobile)))
+            return res.status(400).send({ status: false, msg: "Please provide valid number" });
+        
+        mobile = mobile.toString().trim()
 
-        if (!validator.isValidEmail(email))
-            return res.status(400).send({ status: false, message: 'Enter valid email' });
+        for (let i = 0; i < dublicate.length; i++) {
+            if (dublicate[i].mobile == mobile) {
+                return res.status(400).send({ status: false, msg: "mobile already registered" })
+            }
+        }
 
-        if (!validator.isValidMobile(mobile))
-            return res.status(400).send({ status: false, message: 'Enter valid mobile' });
+        const collegeNames = await collegeModel.findOne({ $or: [{ name: collegeName }, { fullName: collegeName }] })
+        if (!collegeNames) { return res.status(400).send({ status: false, msg: "College not found" }) }
 
-        if (!validator.isValidObjectId(collegeId))
-            return res.status(400).send({ status: false, message: 'Enter valid collegeId' });
+        const Id = collegeNames._id
+        reqBody.collegeId = Id
 
-        // ------------------------ intern creation-----------------------------
         const saveData = await internModel.create(reqBody);
-         res.status(201).send({ status: true, data: saveData });
+        res.status(201).send({ status: true, data: saveData });
 
     } catch (err) {
         res.status(500).send({ status: false, error: err.message });
     }
 };
 
-//-------------------------------------------collegeDetails---------------------------------------------
-const collegeDetails = async (req, res) => {
-    try {
-        const reqQuery = req.query;
-        const collageName = reqQuery.collageName;
-
-        if (!collageName)
-            return res.status(400).send({ status: false, message: 'Query not Received' });
-
-        const collage = await collegeModel.findOne(reqQuery)
-
-        if (!collage)
-            return res.status(404).send({ status: false, message: `${collageName} Not Found, Register First` });
-
-        const collageId = collage._id
-
-        const { name, fullName, logoLink } = collage
-
-        const data = { name, fullName, logoLink }
-
-        const internList = await internModel.find(collageId).select({ _id: 1, name: 1, email: 1, mobile: 1 })
-
-        if (internList.length == 0)
-            return res.status(400).send({ status: false, massage: `${collageName} collage have no intern` })
-
-        data["interests"] = [...internList];
-        res.status(200).send({ status: true, data: data });
-
-    } catch (err) {
-        res.status(500).send({ status: false, error: err.message });
-    }
-};
-
-
-
-
-module.exports = { createIntern, collegeDetails }
+module.exports = { createIntern }

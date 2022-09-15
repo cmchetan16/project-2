@@ -1,52 +1,71 @@
-const collageModel = require('../models/collegeModel')
-const validator = require('../util/validator')
+const internModel = require("../models/internModel")
+const collegeModel = require('../models/collegeModel')
+const { validName, validFullName, dataValidation, logo } = require('../util/validator')
 
-const createCollage = async (req, res) => {
+
+const createCollege = async (req, res) => {
     try {
         const reqBody = req.body;
+
         const { name, fullName, logoLink } = reqBody;
 
-        // ------------------ data present or not in the body--------------------
-        const objKey = Object.keys(reqBody)
-
-        if (objKey == 0)
-            return res.status(400).send({ status: false, message: 'Please fill data' })
-
-        if (objKey > 4)
-            return res.status(400).send({ status: false, message: 'You can\'t add extra field' })
-
-        //----------------field present or not in the body-----------------
+        if (!dataValidation(reqBody))
+            return res.status(400).send({ status: false, msg: "please provide some data " })
 
         if (!name)
-            return res.status(400).send({ status: false, message: 'Please fill name' })
+            return res.status(400).send({ status: false, msg: "name is not present " })
+
+        if (!validName(name))
+            return res.status(400).send({ status: false, msg: "name not valid" })
+
+        const college = await collegeModel.findOne({ name: name })
+
+        if (college)
+            return res.status(400).send({ status: false, msg: "name already exist" })
+
+        if (!validFullName(fullName))
+            return res.status(400).send({ status: false, msg: "Fullname not valid" })
 
         if (!fullName)
-            return res.status(400).send({ status: false, message: 'Please fill fullName' })
+            return res.status(400).send({ status: false, msg: "name is not present " })
+
+        //if(fullName) {return res.status(400).send({status: false, msg:"College name already exist"})}
+
+        if (!logo(logoLink))
+            return res.status(400).send({ status: false, msg: "this url link not valid" })
 
         if (!logoLink)
-            return res.status(400).send({ status: false, message: 'Please fill logoLink' })
+            return res.status(400).send({ status: false, msg: "link is required" })
 
-        // ------------------------ data validations-----------------------------
-        if (!validator.isValidName(name))
-            return res.status(400).send({ status: false, message: 'Enter valid name' });
-
-        if (!validator.isValidText(fullName))
-            return res.status(400).send({ status: false, message: 'Enter valid fullName' });
-
-        if (!validator.isValidLink(logoLink))
-            return res.status(400).send({ status: false, message: 'Enter valid logoLink' });
-
-        // ------------------------ collage creation-----------------------------
-        const saveData = await collageModel.create(reqBody)
+        const saveData = await collegeModel.create(reqBody)
         return res.status(201).send({ status: true, data: saveData })
 
     } catch (err) {
-        res.status(500).send({ status: false, error: err.message })
+        return res.status(500).send({ status: false, error: err.message })
     }
 }
 
+//------------------------------------------------------------------------------------------------------------
+const collegeDetails = async function (req, res) {
+    try {
+        let collegeName = req.query.collegeName
 
+        if (!collegeName) 
+            return res.status(400).send({ status: false, msg: "Invalid request Please provide valid details in Query" });
+        
+        const collegeDetails = await collegeModel.findOne({ name: collegeName })
+        if (!collegeDetails)
+            return res.status(404).send({ status: false, msg: "College doesn't exist" })
+        
+        let interns = await internModel.find({ collegeId: collegeDetails._id }).select({ name: 1, email: 1, mobile: 1 })
 
+        let data = { name: collegeDetails.name, fullName: collegeDetails.fullName, logoLink: collegeDetails.logoLink, interns: interns }
 
+        res.status(200).send({ status: true, data: data })
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send({ status: false, msg: "Error", error: err.message })
+    }
+}
 
-module.exports = { createCollage }
+module.exports = { createCollege, collegeDetails }
