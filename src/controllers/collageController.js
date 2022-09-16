@@ -1,4 +1,4 @@
-const internModel = require("../models/internModel")
+ const internModel = require("../models/internModel")
 const collegeModel = require('../models/collegeModel')
 const { validName, validFullName, dataValidation, logo } = require('../util/validator')
 
